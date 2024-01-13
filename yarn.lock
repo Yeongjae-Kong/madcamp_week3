@@ -1746,12 +1746,12 @@
   dependencies:
     "@tensorflow/tfjs-backend-cpu" "4.16.0"
 
-"@tensorflow/tfjs-converter@^4.10.0", "@tensorflow/tfjs-converter@4.16.0":
+"@tensorflow/tfjs-converter@^4.10.0", "@tensorflow/tfjs-converter@^4.16.0", "@tensorflow/tfjs-converter@4.16.0":
   version "4.16.0"
   resolved "https://registry.npmjs.org/@tensorflow/tfjs-converter/-/tfjs-converter-4.16.0.tgz"
   integrity sha512-gd8dHl9tqEPQOHZLAUza713nKr42rpvUXrtm7yUhk10THvJT6TXe9Q2AJKmni8J3vfR+ghsCh77F8D4RbShx1Q==
 
-"@tensorflow/tfjs-core@^4.10.0", "@tensorflow/tfjs-core@4.16.0":
+"@tensorflow/tfjs-core@^4.10.0", "@tensorflow/tfjs-core@^4.16.0", "@tensorflow/tfjs-core@4.16.0":
   version "4.16.0"
   resolved "https://registry.npmjs.org/@tensorflow/tfjs-core/-/tfjs-core-4.16.0.tgz"
   integrity sha512-MarAtO+Up6wA8pI9QDpQOwwJgb/imYMN++tsoaalyOEE9+B5HS4lQldxDJKXO8Frf4DyXf4FItJktEXaiPfRHw==

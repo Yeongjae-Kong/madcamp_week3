@@ -1,49 +1,44 @@
-import React, {useRef, useEffect, useState} from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import './App.css';
 import Webcam from 'react-webcam';
 import * as poseDetection from '@tensorflow-models/pose-detection';
-// Register one of the TF.js backends.
 import '@tensorflow/tfjs-backend-webgl';
-// import '@tensorflow/tfjs-backend-wasm';
-
+import * as tf from '@tensorflow/tfjs';
 
 function App() {
-  const webcamRef = useRef(null); 
+  const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [detector, setDetector] = useState(null);
 
-  // MoveNet 모델 로드
   useEffect(() => {
-    const loadModel = async () => {
-      const detectorConfig = {
-        modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING,
-        enableTracking: true,
-        trackerType: poseDetection.TrackerType.BoundingBox 
-      };
-      const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
-      setDetector(detector);
-    };
-    loadModel();
+    tf.ready().then(() => { 
+      tf.setBackend('webgl').then(() => {
+        const loadModel = async () => {
+          const detectorConfig = {
+            modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING,
+            enableTracking: true,
+            trackerType: poseDetection.TrackerType.BoundingBox,
+          };
+          const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
+          setDetector(detector);
+        };
+        loadModel();
+      });
+    });
   }, []);
 
   // 포즈 감지 및 캔버스에 결과 그리기
   const detect = async () => {
-    if (webcamRef.current && detector) {
-      const webcam = webcamRef.current;
-      const video = webcam.video;
+    if (!detector) {
+      console.log('Detector is not ready');
+      return;
+    }
 
-      if (video.readyState === 4) {
-        const videoWidth = webcam.video.videoWidth;
-        const videoHeight = webcam.video.videoHeight;
-
-        webcam.video.width = videoWidth;
-        webcam.video.height = videoHeight;
-        canvasRef.current.width = videoWidth;
-        canvasRef.current.height = videoHeight;
-
-        const poses = await detector.estimatePoses(video);
-        drawPose(poses);
-      }
+    if (webcamRef.current && webcamRef.current.video.readyState === 4) {
+      const video = webcamRef.current.video;
+      const poses = await detector.estimatePoses(video);
+      drawPose(poses);
+      console.log(poses);
     }
   };
 
@@ -64,45 +59,46 @@ function App() {
   };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      detect();
-    }, 100);
-    return () => clearInterval(interval);
+    if (detector) {
+      const interval = setInterval(() => {
+        detect();
+      }, 100);
+      return () => clearInterval(interval);
+    }
   }, [detector]);
 
-  
   return (
     <div className="App">
-        <header className="App-header">
-          <Webcam
-            ref={webcamRef}
-            style = {{
-              position: "absolute",
-              marginLeft: "auto",
-              marginRight: "auto",
-              left: 0,
-              right: 0,
-              textAlign: "center",
-              zindex : 9,
-              width: 640,
-              height: 480
-            }}
-            />
-
-            <canvas 
-              ref={canvasRef}
-              style = {{
-                position: "absolute",
-                marginLeft: "auto",
-                marginRight: "auto",
-                left: 0,
-                right: 0,
-                textAlign: "center",
-                zindex : 9,
-                width: 640,
-                height: 480
-              }} />
-        </header>
+      <header className="App-header">
+        <Webcam
+          ref={webcamRef}
+          style={{
+            position: "absolute",
+            marginLeft: "auto",
+            marginRight: "auto",
+            left: 0,
+            right: 0,
+            textAlign: "center",
+            zindex: 9,
+            width: 640,
+            height: 480,
+          }}
+        />
+        <canvas
+          ref={canvasRef}
+          style={{
+            position: "absolute",
+            marginLeft: "auto",
+            marginRight: "auto",
+            left: 0,
+            right: 0,
+            textAlign: "center",
+            zindex: 9,
+            width: 640,
+            height: 480,
+          }}
+        />
+      </header>
     </div>
   );
 }
