@@ -35,7 +35,6 @@ function extractFramesFromVideo(videoFilePath, frameCount) {
     }
 
     currentFrameNumber += 1;
-    
 
     const ffmpeg = spawn('ffmpeg', [
       '-i', videoFilePath,
@@ -51,8 +50,10 @@ function extractFramesFromVideo(videoFilePath, frameCount) {
     
     ffmpeg.on('exit', (code) => {
       if (code === 0) {
-        const files = fs.readdirSync(framesDir).filter(file => file.endsWith('.jpg'));
-        resolve(files.length); // 생성된 파일 개수를 반환
+        const files = fs.readdirSync(framesDir).filter(file => {
+          const regex = new RegExp(`frame-${currentFrameNumber}-(\\d+).jpg`);
+          resolve(file.match(regex));
+        });
       } else {
         console.error(`ffmpeg exited with code: ${code}`);
         reject(new Error(`ffmpeg exited with code: ${code}`));
@@ -72,8 +73,7 @@ async function loadImage(framePath) {
 async function getSkeleton(videoFilePath) {
   console.log('get skeleton');
   console.log(videoFilePath);
-  const frameCount=0;
-  frameCount == await extractFramesFromVideo(videoFilePath, frameLength);
+  const frameCount = await extractFramesFromVideo(videoFilePath, frameLength);
   const xyListList = [];
   const xyListListFlip = [];
 
@@ -83,12 +83,12 @@ async function getSkeleton(videoFilePath) {
     trackerType: poseDetection.TrackerType.BoundingBox,
   };
 
-  const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
+  const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,detectorConfig);
   for (let i = 1; i < frameCount; i++) {
     const framePath = `frames/frame-${currentFrameNumber}-${i}.jpg`;
-    console.log(framePath);
-    const image = await loadImage(framePath);
-    const poses = await detector.estimatePoses(image);
+    const image = loadImage(framePath);
+    console.log('image : ', framePath);
+    const poses = detector.estimatePoses(image);
     console.log('poses : ', poses);
 
     for (const pose of poses) {
@@ -156,8 +156,8 @@ function shuffle(array) {
       }
     }
   
-    raw_data = shuffle(raw_data);
     console.log('raw_data : ', raw_data);
+    raw_data = shuffle(raw_data);
   
     let normalDataCount = 0;
     let abnormalDataCount = 0;
