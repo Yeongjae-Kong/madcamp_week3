@@ -12,9 +12,9 @@ const videoPath = './video'; // 비디오 경로
 const framesDir = './frames'; // 프레임 경로
 
 // 관심 있는 포즈 keypoints 배열
-const attentionDot = [];
+const attention_dot = [];
 for (let n = 0; n < 17; n++) {
-    attentionDot.push(n);
+    attention_dot.push(n);
 }
 
 let raw_data = [];
@@ -25,9 +25,6 @@ function checkFileExists(filePath) {
 
 function extractFramesFromVideo(videoFilePath, frameCount) {
   return new Promise((resolve, reject) => {
-    console.log('extract frames');
-    console.log(videoFilePath);
-
     if (!checkFileExists(videoFilePath)) {
       console.log('File does not exist');
       reject(new Error('Video file does not exist'));
@@ -52,8 +49,9 @@ function extractFramesFromVideo(videoFilePath, frameCount) {
       if (code === 0) {
         const files = fs.readdirSync(framesDir).filter(file => {
           const regex = new RegExp(`frame-${currentFrameNumber}-(\\d+).jpg`);
-          resolve(file.match(regex));
+          return file.match(regex);
         });
+        resolve(files.length);
       } else {
         console.error(`ffmpeg exited with code: ${code}`);
         reject(new Error(`ffmpeg exited with code: ${code}`));
@@ -61,18 +59,8 @@ function extractFramesFromVideo(videoFilePath, frameCount) {
     });
   });
 }
-
-
-async function loadImage(framePath) {
-  console.log('load image');
-  const data = await readFile(framePath);
-  const imageTensor = tf.node.decodeImage(new Uint8Array(data), 3);
-  return imageTensor;
-}
   
 async function getSkeleton(videoFilePath) {
-  console.log('get skeleton');
-  console.log(videoFilePath);
   const frameCount = await extractFramesFromVideo(videoFilePath, frameLength);
   const xyListList = [];
   const xyListListFlip = [];
@@ -84,37 +72,27 @@ async function getSkeleton(videoFilePath) {
   };
 
   const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,detectorConfig);
-  for (let i = 1; i < frameCount; i++) {
-    const framePath = `frames/frame-${currentFrameNumber}-${i}.jpg`;
-    const image = loadImage(framePath);
-    console.log('image : ', framePath);
-    const poses = detector.estimatePoses(image);
-    console.log('poses : ', poses);
 
-    for (const pose of poses) {
-      if (!pose.length) {
-        console.log('No poses detected');
-        continue;
-      }
-        
-      console.log('pose detected');
-      console.log('pose : ', pose);
-      const keypoints = pose.keypoints.filter((_, index) => attentionDot.includes(index));
-      console.log('keypoints : ', keypoints);
-      const xyList = keypoints.map(kp => [kp.x, kp.y]);
-      const xyListFlip = keypoints.map(kp => [1 - kp.x, kp.y]);
+  for (let i = 1; i <= frameCount; i++) {
+    const fileName = `frame-${currentFrameNumber}-${i}.jpg`;
+    const filePath = `${framesDir}/${fileName}`;
+    const image = await readFile(filePath);
+    const imageTensor = tf.node.decodeImage(image, 3);
+    const poses = await detector.estimatePoses(imageTensor);
 
-      xyListList.push(xyList.flat());
-      xyListListFlip.push(xyListFlip.flat());
-    }
-
-    while (xyListList.length < frameLength){
-      xyListList.push(xyListList[xyListList.length - 1]);
-      xyListListFlip.push(xyListListFlip[xyListListFlip.length - 1]);
+    if (poses.length > 0 && poses[0]) {
+      const keypoints = poses[0].keypoints;
+      xyListList.push(keypoints);
+  
+      const keypointsFlipped = keypoints.map(keypoint => ({
+        ...keypoint,
+        x: imageTensor.shape[1] - keypoint.x 
+      }));
+      xyListListFlip.push(keypointsFlipped);
+    } else {
+      console.log(`No poses detected in ${fileName}`);
     }
   }
-  console.log('xyListList :', xyListList);
-  console.log('xyListListFlip :', xyListListFlip);
   return { xyListList, xyListListFlip };
 }
 
@@ -137,27 +115,33 @@ function shuffle(array) {
     console.log('collect data');
     const videoPaths = ['abnormal', 'normal'];
     for (const folder of videoPaths) {
-      console.log('folder :', folder);
       const videos = fs.readdirSync(`${videoPath}/${folder}`);
-      console.log('videos', videos);
       for (const video of videos) {
-        console.log('video : ', video);
         const videoNameSplit = video.split('_');
-        console.log(videoNameSplit);
         const label = videoNameSplit[2] === 'normal' ? 0 : 1;
         const videoFilePath = `${videoPath}/${folder}/${video}`;
-        console.log(videoFilePath);
         const { xyListList, xyListListFlip } = await getSkeleton(videoFilePath);
         const seqListN = xyListList.slice(0, frameLength);
         const seqListF = xyListListFlip.slice(0, frameLength);
-    
+
         raw_data.push({ key: label, value: seqListN });
         raw_data.push({ key: label, value: seqListF });
       }
     }
   
-    console.log('raw_data : ', raw_data);
+    console.log('raw data');
+    console.table(raw_data);
     raw_data = shuffle(raw_data);
+    // raw_data 배열의 각 요소에 대해 실행
+    raw_data.forEach((item, index) => {
+      console.log(`Item at index ${index} with key ${item.key}:`);
+      item.value.forEach((innerArray, innerIndex) => {
+        console.log(`Table for inner array at index ${innerIndex}:`);
+        console.table(innerArray);
+      });
+    });
+    
+
   
     let normalDataCount = 0;
     let abnormalDataCount = 0;

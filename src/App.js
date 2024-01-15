@@ -37,6 +37,7 @@ function App() {
     if (webcamRef.current && webcamRef.current.video.readyState === 4) {
       const video = webcamRef.current.video;
       const poses = await detector.estimatePoses(video);
+      console.log("poses: ", poses);
       drawPose(poses);
       poses.forEach((pose) => {
         drawConnections(video, canvasRef.current.getContext("2d"), pose.keypoints, EDGES, 0.5);
