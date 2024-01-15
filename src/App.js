@@ -174,3 +174,4 @@ function drawConnections(video,ctx, keypoints, edges, confidenceThreshold) {
 }
 
 export default App;
+
