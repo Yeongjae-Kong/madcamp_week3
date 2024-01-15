@@ -1,12 +1,14 @@
-const frameLength = 30;
+const frameLength = 3;
 const fs = require('fs');
 const { spawn } = require('child_process');
 const tf = require('@tensorflow/tfjs-node');
 const poseDetection = require('@tensorflow-models/pose-detection');
 const util = require('util');
+const path = require('path');
 const readFile = util.promisify(fs.readFile);
 const { moveNet } = poseDetection.SupportedModels;
 const videoPath = './video'; // 비디오 경로
+const framesDir = './frames'; // 프레임 경로
 
 // 관심 있는 포즈 keypoints 배열
 const attentionDot = [];
@@ -31,11 +33,16 @@ function extractFramesFromVideo(videoFilePath, frameCount) {
       return;
     }
 
+    // 'frames' 디렉토리 내의 현재 파일들을 모두 삭제 (새로운 프레임 추출 전에)
+    fs.readdirSync(framesDir).forEach((file) => {
+      fs.unlinkSync(path.join(framesDir, file));
+    });
+
     const ffmpeg = spawn('ffmpeg', [
       '-i', videoFilePath,
       '-vf', `fps=${frameCount}`,
       '-qscale:v', '2',
-      `frame-%d.jpg`,
+      path.join(framesDir, 'frame-%d.jpg'),
     ]);
 
     ffmpeg.on('error', (err) => {
@@ -45,8 +52,8 @@ function extractFramesFromVideo(videoFilePath, frameCount) {
     
     ffmpeg.on('exit', (code) => {
       if (code === 0) {
-        console.log('ffmpeg successfully exited with code 0.');
-        resolve();
+        const files = fs.readdirSync(framesDir).filter(file => file.endsWith('.jpg'));
+        resolve(files.length); // 생성된 파일 개수를 반환
       } else {
         console.error(`ffmpeg exited with code: ${code}`);
         reject(new Error(`ffmpeg exited with code: ${code}`));
@@ -67,7 +74,10 @@ async function getSkeleton(videoFilePath) {
   console.log('get skeleton');
   console.log(videoFilePath);
 
-  const frameCount = frameLength;
+  const frameCount = await extractFramesFromVideo(videoFilePath, frameLength);
+  console.log(frameCount);
+  const xyListList = [];
+  const xyListListFlip = [];
 
   const detectorConfig = {
     modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING,
@@ -77,16 +87,12 @@ async function getSkeleton(videoFilePath) {
 
   const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
 
-  await extractFramesFromVideo(videoFilePath, frameCount);
-
-  for (let i = 0; i < frameCount; i++) {
-    const framePath = `frame-${i + 1}.jpg`; // ffmpeg는 1부터 시작하여 프레임을 저장합니다
+  for (let i = 1; i < frameCount; i++) {
+    const framePath = `frames/frame-${i + 1}.jpg`; 
     console.log(framePath);
     const image = await loadImage(framePath);
     const poses = await detector.estimatePoses(image);
     console.log(poses);
-    const xyListList = [];
-    const xyListListFlip = [];
 
     for (const pose of poses) {
       if (!pose.length) {
@@ -97,6 +103,7 @@ async function getSkeleton(videoFilePath) {
       console.log('pose detected');
       console.log(pose);
       const keypoints = pose.keypoints.filter((_, index) => attentionDot.includes(index));
+      console.log(keypoints);
       const xyList = keypoints.map(kp => [kp.x, kp.y]);
       const xyListFlip = keypoints.map(kp => [1 - kp.x, kp.y]);
 
@@ -130,11 +137,11 @@ function shuffle(array) {
   }
   
   async function collectData() {
-    const videoFolders = videoPath;
-    console.log(videoFolders);
-  
-    for (const folder of videoFolders) {
+    console.log('collect data');
+    for (const folder of videoPath) {
+      console.log(folder);
       const videos = fs.readdirSync(`${videoPath}/${folder}`);
+      console.log('videos');
       console.log(videos);
       for (const video of videos) {
         console.log(video);
