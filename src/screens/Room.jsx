@@ -15,11 +15,13 @@ const RoomPage = () => {
   const [model, setModel] = useState(null);
 
   useEffect(() => {
-    tf.ready().then(() => {
-      tf.loadLayersModel('./model/model.json').then(loadedModel => {
-        setModel(loadedModel);
-      });
-    });
+    const loadModel = async () => {
+      await tf.ready();
+      const loadedModel = await tf.loadLayersModel('file://path/to/my-model/model.json');
+      setModel(loadedModel);
+    };
+  
+    loadModel();
   }, []);
 
   const handleUserJoined = useCallback(({ email, id }) => {
@@ -152,7 +154,7 @@ const RoomPage = () => {
 
   // 포즈 추정 및 그리기
   const detectPose = async () => {
-    if (detector) {
+    if (detector && model) {
       const video = getPlayerElement();
       if (video && video.readyState >= 2) {
          // 캔버스 크기 조정
@@ -161,8 +163,31 @@ const RoomPage = () => {
         canvas.height = video.videoHeight;
 
         const poses = await detector.estimatePoses(video);
+        const processedPoses = processPoses(poses);
+        const prediction = model.predict(processedPoses);
+
+        const drawPrediction = (prediction, video) => {
+          const ctx = canvasRef.current.getContext("2d");
+          const scaleX = canvasRef.current.width / video.videoWidth;
+          const scaleY = canvasRef.current.height / video.videoHeight;
+        
+          ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        
+          // 예측 결과에 따라 포즈를 그리는 로직
+          prediction.forEach((pred) => {
+            if (pred.y === 0) {
+              // "절도 발생" 메시지를 캔버스 하단 중앙에 표시
+              const text = "절도 발생";
+              ctx.font = "24px Arial";
+              ctx.fillStyle = "red";
+              ctx.fillText(text, (canvasRef.current.width - ctx.measureText(text).width) / 2, canvasRef.current.height - 20);
+            }
+          });
+        };
+
         // 캔버스에 포즈 그리는 로직
         drawPose(poses, video);
+        drawPrediction(prediction);
         poses.forEach((pose) => {
           drawConnections(video, canvasRef.current.getContext("2d"), pose.keypoints, EDGES, 0.5);
         });
@@ -170,12 +195,31 @@ const RoomPage = () => {
     }
   };
 
+  function processPoses(poses) {
+  
+    return poses.map(poseArray => {
+      const defaultKeypoints = new Array(17).fill([1, 1, 0]);
+      // 각 포즈 배열의 첫 번째 요소에서 keypoints를 가져옴
+      if (!poseArray[0] || !poseArray[0].keypoints) {
+          console.error('Invalid pose data:', poseArray);
+          return defaultKeypoints; // 또는 적절한 기본값 반환
+      }
+  
+      const keypoints = poseArray[0].keypoints;
+  
+      // 유효한 keypoints 데이터 처리
+      return keypoints.map(keypoint => {
+          return [keypoint.x, keypoint.y, keypoint.score];
+      });
+    });
+  }
+
   function getColorForEdge(colorCode) {
     switch(colorCode) {
         case 'red':
             return 'red';
         case 'blue':
-            return 'blue';
+            return 'green';
       }
   }
 
@@ -252,13 +296,13 @@ const RoomPage = () => {
 
 
   useEffect(() => {
-    if (detector) {
+    if (detector && model) {
       const interval = setInterval(() => {
         detectPose();
-      }, 100);
+      }, 100); // 100ms마다 detectPose를 호출
       return () => clearInterval(interval);
     }
-  }, [detector, myStream]);
+  }, [detector, model]);
 
   return (
     <div className="app-container">
