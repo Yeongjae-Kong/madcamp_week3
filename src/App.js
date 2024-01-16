@@ -4,6 +4,7 @@ import Webcam from 'react-webcam';
 import * as poseDetection from '@tensorflow-models/pose-detection';
 import '@tensorflow/tfjs-backend-webgl';
 import * as tf from '@tensorflow/tfjs';
+const model = await tf.loadLayersModel('file://model/model.json');
 
 function App() {
   const webcamRef = useRef(null);
