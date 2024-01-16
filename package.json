@@ -1,11 +1,27 @@
 {
   "name": "client",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "dependencies": {
+    "@mediapipe/pose": "^0.5.1675469404",
+    "@tensorflow-models/pose-detection": "^2.1.3",
+    "@tensorflow/tfjs": "^4.16.0",
+    "@tensorflow/tfjs-backend-wasm": "^4.16.0",
+    "@tensorflow/tfjs-backend-webgl": "^4.16.0",
+    "@tensorflow/tfjs-converter": "^4.16.0",
+    "@tensorflow/tfjs-core": "^4.16.0",
+    "@tensorflow/tfjs-node": "^3.1.0",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+<<<<<<< HEAD
+    "child_process": "^1.0.2",
+    "fluent-ffmpeg": "^2.1.2",
+    "opencv-build": "^0.1.9",
+=======
+    "eslint-config-react-app": "6",
+>>>>>>> 92030a1a5b086ddccf899c6bd734063c39dae48d
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-player": "^2.12.0",
@@ -14,8 +30,15 @@
     "socket.io-client": "^4.6.1",
     "web-vitals": "^2.1.4"
   },
+  "opencv4nodejs": {
+    "disableAutoBuild": 1,
+    "opencvIncludeDir": "R:\\OpenCV\\opencv\\build\\include",
+    "opencvLibDir": "R:\\OpenCV\\opencv\\build\\x64\\vc15\\lib",
+    "opencvBinDir": "R:\\OpenCV\\opencv\\build\\x64\\vc15\\bin",
+    "opencvDir": "R:\\OpenCV\\opencv\\build\\x64\\vc15"
+  },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "react-scripts --openssl-legacy-provider start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -37,5 +60,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "eslint": "7.32.0"
   }
 }

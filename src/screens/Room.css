@@ -1,0 +1,29 @@
+/* CSS */
+.video-container {
+  position: relative;
+  width: 50%;  /* ReactPlayer의 너비 */
+  padding-top: 50%; /* 16:9 비율 유지 */
+  margin: auto;
+}
+
+.player-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.react-player {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.overlay-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
