@@ -1,6 +1,7 @@
 {
   "name": "my-app",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "dependencies": {
     "@mediapipe/pose": "^0.5.1675469404",
@@ -10,17 +11,24 @@
     "@tensorflow/tfjs-backend-webgl": "^4.16.0",
     "@tensorflow/tfjs-converter": "^4.16.0",
     "@tensorflow/tfjs-core": "^4.16.0",
+    "@tensorflow/tfjs-node": "^4.16.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "canvas": "^2.11.2",
+    "child-process": "^1.0.2",
+    "fluent-ffmpeg": "^2.1.2",
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "^3.0.1",
     "react-webcam": "^7.2.0",
+    "util": "^0.12.5",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "NODE_OPTIONS=--openssl-legacy-provider react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
