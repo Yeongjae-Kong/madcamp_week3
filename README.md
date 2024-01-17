@@ -32,14 +32,14 @@ ADHD (Anomaly Detection with Human Data) 프로젝트는 최근 급증하는 무
     
     기존에 augmentation없이 model을 학습했을 땐 특정 좌표에서 pose estimation 시 prediction이 되는 문제가 있었는데, data augmentation을 통해 x 좌표를 flip해서 학습을 진행했더니 상대적으로 훨씬 detection을 잘 수행하였음.
     
-    ![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/f6cb388f-3934-47d6-9928-26d2e10eb0fc/4b435e0f-d7bd-42b5-af6e-b92c385a7b04/Untitled.png)
+    <img width="521" alt="image" src="https://github.com/Yeongjae-Kong/madcamp_week3/assets/67358433/994feb5d-d850-4727-97c6-17a974be34a9">
+
     
 3. Pose estimation 
     
     posenet, mediapipe 등의 pose estimation model이 있었지만 최근 Google research에서 성능과 속도면에서 큰 향상을 보인 movenet을 사용하기로 결정. Frame 별로 Human pose를 17개의 (x, y, score) shape를 가지는 Keypoints로 나눠 이를 LSTM model에 넣어 학습함. 
     
-
-![KakaoTalk_20240117_173501232.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/f6cb388f-3934-47d6-9928-26d2e10eb0fc/a8e89f41-206a-4e52-9d35-5b9ac3318e8b/KakaoTalk_20240117_173501232.png)
+![KakaoTalk_20240117_173501232](https://github.com/Yeongjae-Kong/madcamp_week3/assets/67358433/dc911563-235a-4c2a-bdac-57cd378a79de)
 
 1. modeling
     
