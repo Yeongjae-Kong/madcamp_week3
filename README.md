@@ -1,70 +1,71 @@
-# Getting Started with Create React App
+# 프로젝트 소개
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+ADHD (Anomaly Detection with Human Data) 프로젝트는 최근 급증하는 무인점포 범죄 등을 해결하고자, Movenet + LSTM으로 AI model을 학습시켜 CCTV(웹캠) 등에서 realtime으로 Humanpose를 추출하여 폭행 등의 이상 상황을 탐지할 수 있도록 한 AI 프로젝트입니다.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+### 개발 팀원
 
-### `npm start`
+- 공영재 (DGIST 19학번)
+- 김가연 (성균관대학교 20학번)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### 개발환경
 
-### `npm test`
+- library : react, socket.io
+- API : webRTC
+- DeepLearning Framework : Movenet
+- Language : javascript, css
+- Model : LSTM
+- Server Deployment : AWS EC2
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+### Major feature
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Data collection & processing 
+    
+    폭행 상황 영상(abnormal)과 정상 상황(normal)을 다양한 viewpoint에서 자체적으로 촬영 후(100 sec), 3 fps로 이미지를 나눔 (총 frame 수 = 600)
+    
+2. Data augmentation
+    
+    기존에 augmentation없이 model을 학습했을 땐 특정 좌표에서 pose estimation 시 prediction이 되는 문제가 있었는데, data augmentation을 통해 x 좌표를 flip해서 학습을 진행했더니 상대적으로 훨씬 detection을 잘 수행하였음.
+    
+    ![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/f6cb388f-3934-47d6-9928-26d2e10eb0fc/4b435e0f-d7bd-42b5-af6e-b92c385a7b04/Untitled.png)
+    
+3. Pose estimation 
+    
+    posenet, mediapipe 등의 pose estimation model이 있었지만 최근 Google research에서 성능과 속도면에서 큰 향상을 보인 movenet을 사용하기로 결정. Frame 별로 Human pose를 17개의 (x, y, score) shape를 가지는 Keypoints로 나눠 이를 LSTM model에 넣어 학습함. 
+    
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+![KakaoTalk_20240117_173501232.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/f6cb388f-3934-47d6-9928-26d2e10eb0fc/a8e89f41-206a-4e52-9d35-5b9ac3318e8b/KakaoTalk_20240117_173501232.png)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. modeling
+    
+    동영상 시계열 데이터를 학습하기 위한 Recurrent Neural Network의 일종인 LSTM을 사용함. 이때, 각 frame에 대해 pose estimation을 하여 도출된 output인 (17, 3) keypoints를 입력값으로 사용함
+    
+2. hyperparameter
+    
+    Loss : CELoss 
+    
+    Optimizer : Adam
+    
+    activation : softmax
+    
+    epoch : 100 
+    
+    batchsize : 12 
+    
+3. Web
+    
+    React와 webRTC를 활용해 실시간 웹캠 영상을 송출하는 사이트를 만들고, AWS EC2에 [socket.io](http://socket.io) server를 열어 통신하였음.
+    
 
-### `npm run eject`
+---
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### 문제상황 및 보완
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+1. 다양한 이상 상황을 고려하기 위해 2명 이상의 human pose를 추출하는 movenet multipose를 사용하려 했으나, human pose 수에 따라 동적으로 변화하는 input shape을 처리하는데 어려움을 겪고 결국 singlepose로 학습하고 실행하였음. 기획 단계에서 이를 고려하여 개발했다면 더 효율적으로 프로젝트를 진행할 수 있었을 것이라는 점에서 아쉬움이 남음.
+2. 공공 API의 CCTV 이상상황 데이터를 통해 LSTM model 학습을 시도했으나, 비슷한 세트장의 비슷한 viewpoint를 가진 dataset 때문인지 실시간 웹캠에서 model을 연결하니 학습이 제대로 되지 않았음. 
+3. 이에 따라 자체적으로 학습 데이터를 녹화하여 생성하였음. 처음 dataset을 학습할 때 fps를 10으로 설정했는데, overfitting되서인지 test accuracy는 높게 나왔지만 realtime webcam에서는 prediction을 제대로 수행하지 못했음. 이후 fps를 3으로 낮춰서 재학습했더니 이전보다 상대적으로 높은 퀄리티를 보여주었음.
