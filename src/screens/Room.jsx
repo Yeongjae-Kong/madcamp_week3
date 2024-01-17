@@ -17,7 +17,7 @@ const RoomPage = () => {
   useEffect(() => {
     const loadModel = async () => {
       await tf.ready();
-      const loadedModel = await tf.loadLayersModel('file://path/to/my-model/model.json');
+      const loadedModel = await tf.loadLayersModel('/model/model.json');
       setModel(loadedModel);
     };
   
@@ -44,7 +44,7 @@ const RoomPage = () => {
       setRemoteSocketId(from);
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
-        video: { width: 640, height: 640 },
+        video: { width: 640, height: 640},
       });
       setMyStream(stream);
       console.log(`Incoming Call`, from, offer);
@@ -133,8 +133,7 @@ const RoomPage = () => {
       tf.setBackend('webgl').then(() => {
         const loadModel = async () => {
           const detectorConfig = {
-            modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING,
-            enableTracking: true,
+            modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
           };
           const detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
           setDetector(detector);
@@ -154,7 +153,7 @@ const RoomPage = () => {
 
   // 포즈 추정 및 그리기
   const detectPose = async () => {
-    if (detector && model) {
+    if (detector && model && playerRef.current) {
       const video = getPlayerElement();
       if (video && video.readyState >= 2) {
          // 캔버스 크기 조정
@@ -164,30 +163,53 @@ const RoomPage = () => {
 
         const poses = await detector.estimatePoses(video);
         const processedPoses = processPoses(poses);
-        const prediction = model.predict(processedPoses);
+        console.log(processedPoses);
+        
+        let inputTensor;
+        if (processedPoses.length > 0) {
+          inputTensor = tf.tensor3d(processedPoses, [processedPoses.length, 17, 3]);
+        } else {
+          // 데이터가 비어 있는 경우, 0으로 초기화된 텐서 생성
+          inputTensor = tf.zeros([1, 17, 3]);
+        }
 
-        const drawPrediction = (prediction, video) => {
+        console.log('inputTensor : ', inputTensor);
+        const prediction = model.predict(inputTensor);
+
+        prediction.array().then(predictionsArray => {
+          // 예측 결과 배열 출력
+          console.log(predictionsArray);
+        });
+
+        const predictions = await prediction.array();
+        prediction.dispose(); // 텐서 메모리 해제
+
+        const drawPrediction = (predictions, video) => {
+          if (!video) {
+            console.log("can't find video!~~!")
+            return;
+          }
+
           const ctx = canvasRef.current.getContext("2d");
           const scaleX = canvasRef.current.width / video.videoWidth;
           const scaleY = canvasRef.current.height / video.videoHeight;
-        
-          ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        
+          console.log("predictions [0] : ", predictions[0]);
           // 예측 결과에 따라 포즈를 그리는 로직
-          prediction.forEach((pred) => {
-            if (pred.y === 0) {
+          predictions.forEach((pred) => {
+            if (pred[0] >= 0.8) {
               // "절도 발생" 메시지를 캔버스 하단 중앙에 표시
-              const text = "절도 발생";
-              ctx.font = "24px Arial";
+              console.log("폭행 발생");
+              const text = "폭행 발생";
+              ctx.font = "60px Arial";
               ctx.fillStyle = "red";
-              ctx.fillText(text, (canvasRef.current.width - ctx.measureText(text).width) / 2, canvasRef.current.height - 20);
+              ctx.fillText(text, (canvasRef.current.width - ctx.measureText(text).width) / 2, canvasRef.current.height - 200);
             }
           });
         };
 
         // 캔버스에 포즈 그리는 로직
         drawPose(poses, video);
-        drawPrediction(prediction);
+        drawPrediction(predictions, video);
         poses.forEach((pose) => {
           drawConnections(video, canvasRef.current.getContext("2d"), pose.keypoints, EDGES, 0.5);
         });
@@ -200,12 +222,12 @@ const RoomPage = () => {
     return poses.map(poseArray => {
       const defaultKeypoints = new Array(17).fill([1, 1, 0]);
       // 각 포즈 배열의 첫 번째 요소에서 keypoints를 가져옴
-      if (!poseArray[0] || !poseArray[0].keypoints) {
+      if (!poseArray || !poseArray.keypoints) {
           console.error('Invalid pose data:', poseArray);
           return defaultKeypoints; // 또는 적절한 기본값 반환
       }
   
-      const keypoints = poseArray[0].keypoints;
+      const keypoints = poseArray.keypoints;
   
       // 유효한 keypoints 데이터 처리
       return keypoints.map(keypoint => {
@@ -299,7 +321,7 @@ const RoomPage = () => {
     if (detector && model) {
       const interval = setInterval(() => {
         detectPose();
-      }, 100); // 100ms마다 detectPose를 호출
+      }, 200); // 100ms마다 detectPose를 호출
       return () => clearInterval(interval);
     }
   }, [detector, model]);

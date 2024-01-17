@@ -7,7 +7,7 @@ const poseDetection = require('@tensorflow-models/pose-detection');
 const util = require('util');
 const path = require('path');
 const readFile = util.promisify(fs.readFile);
-const { moveNet } = poseDetection.SupportedModels;
+const moveNet = poseDetection.SupportedModels;
 const videoPath = './video'; // 비디오 경로
 const framesDir = './frames'; // 프레임 경로
 
@@ -34,12 +34,6 @@ function extractFramesFromVideo(videoFilePath, frameCount) {
       return;
     }
 
-    // 'frames' 디렉토리 내의 현재 파일들을 모두 삭제 (새로운 프레임 추출 전에)
-    /*
-    fs.readdirSync(framesDir).forEach((file) => {
-      fs.unlinkSync(path.join(framesDir, file));
-    });
-    */
     currentFrameNumber += 1;
     
 
@@ -84,7 +78,7 @@ async function getSkeleton(videoFilePath) {
   const xyListListFlip = [];
 
   const detectorConfig = {
-    modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING,
+    modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
     enableTracking: true,
     trackerType: poseDetection.TrackerType.BoundingBox,
   };
@@ -181,4 +175,3 @@ function shuffle(array) {
   
   // 데이터 수집 함수 호출
   collectData();
-  

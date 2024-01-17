@@ -1,32 +1,3 @@
-// import { loadModel, estimatePoses } from './model.js';
-// import fs from 'fs';
-// import * as tf from '@tensorflow/tfjs-node';
-
-// async function runPoseEstimation() {
-//   // 모델 로드
-//   const detector = await loadModel();
-
-//   // 이미지 프레임을 포함하는 배열
-//   const imageFrames = [];
-//   const framesDir = './frames';
-
-//   for (let i = 1; i <= 30; i++) {
-//       const fileName = `frame-1-${i}.jpg`;
-//       const filePath = `${framesDir}/${fileName}`;
-//       const fileData = fs.readFileSync(filePath); // 파일 내용 읽기
-//       const imageTensor = tf.node.decodeImage(fileData, 3); // 버퍼를 텐서로 변환, 3은 채널 수(RGB)
-//       imageFrames.push(imageTensor);
-//   }
-
-//   // 포즈 추정 실행
-//   const poses = await estimatePoses(detector, imageFrames);
-
-//   // 결과 처리 및 텐서 메모리 해제
-//   imageFrames.forEach(tensor => tensor.dispose()); // 사용한 텐서들의 메모리를 해제합니다.
-// }
-
-// runPoseEstimation();
-
 import { loadModel, estimatePoses } from './model.js';
 import fs from 'fs';
 import * as tf from '@tensorflow/tfjs-node';
@@ -41,9 +12,9 @@ async function runPoseEstimation() {
     const labels = [];
     const framesDir = './frames';
 
-    for (let j = 1; j <= 20; j++) { //temp, data 수에 따라 변경
-        const label = j <= 9 ? 0 : 1; // abnormal: 0, normal: 1
-        for (let i = 1; i <= 30; i++) {
+    for (let j = 1; j <= 2; j++) { //temp, data 수에 따라 변경
+        const label = j <= 1 ? 0 : 1; // abnormal: 0, normal: 1
+        for (let i = 1; i <= 300; i++) {
             const fileName = `frame-${j}-${i}.jpg`;
             const filePath = `${framesDir}/${fileName}`;
             const fileData = fs.readFileSync(filePath);
@@ -65,7 +36,7 @@ async function runPoseEstimation() {
     console.log('processedPoses[0] : ', processedPoses[0]);
     const combinedData = processedPoses.map((pose, index) => ({ x: pose, y: labels[index] }));
     console.log("combinedData[0] = ", combinedData[0]);
-    console.log("combinedData[400] = ", combinedData[400]);
+    console.log("combinedData[0] = ", combinedData[301]);
     if (combinedData.length === 0) {
       console.error('No data to split');
       return;
@@ -118,23 +89,33 @@ function createModel() {
       returnSequences: true
     }));
 
-    // 드롭아웃 레이어
-    model.add(tf.layers.dropout(0.2));
+    model.add(tf.layers.lstm({
+        units: 256,
+        returnSequences: true
+      }));
 
-    // 추가 LSTM 레이어
-    // 예시: 두 번째 LSTM 레이어
+    model.add(tf.layers.dropout(0.1));
+
+    model.add(tf.layers.lstm({
+        units: 128,
+        returnSequences: true
+      }));
+
     model.add(tf.layers.lstm({
         units: 64,
-        returnSequences: false // 마지막 LSTM 레이어는 보통 false
-    }));
+        returnSequences: true
+      }));
 
-    // 드롭아웃 레이어
-    model.add(tf.layers.dropout(0.2));
+    model.add(tf.layers.dropout(0.1));
 
+    model.add(tf.layers.lstm({
+        units: 32,
+        returnSequences: false
+      }));
     // 출력 레이어
     model.add(tf.layers.dense({
-        units: 10, // 예시: 10개의 출력 클래스를 가정
-        activation: 'softmax' // 분류 문제의 경우 'softmax'를 사용
+        units: 2, 
+        activation: 'softmax'
         }));
 
     return model;
@@ -161,6 +142,7 @@ function splitData(data, trainSize, valSize) {
     const numValSamples = Math.floor(valSize * data.length);
 
     const trainIdx = shuffledIndices.slice(0, numTrainSamples);
+    console.log('Shuffled Train Data:', extractData(data, trainIdx));
     const valIdx = shuffledIndices.slice(numTrainSamples, numTrainSamples + numValSamples);
     const testIdx = shuffledIndices.slice(numTrainSamples + numValSamples);
 
@@ -176,11 +158,30 @@ function extractData(data, indices) {
 }
 
 async function trainModel(model, trainData, valData) {
-    // trainData와 valData에서 x와 y값 추출
-    const trainXValues = trainData.map(data => data.x);
-    const trainYValues = trainData.map(data => data.y);
-    const valXValues = valData.map(data => data.x);
-    const valYValues = valData.map(data => data.y);
+    function augmentData(data) {
+        return data.map(item => ({
+            x: item.x.map(keypoint => [1080 - keypoint[0], keypoint[1], keypoint[2]]),
+            y: item.y
+        }));
+    }
+    
+    // 원본 데이터
+    const originalTrainData = trainData;
+    const originalValData = valData;
+    
+    // 데이터 증강 수행
+    const augmentedTrainData = augmentData(originalTrainData);
+    const augmentedValData = augmentData(originalValData);
+    
+    // 원본 데이터와 증강된 데이터 결합
+    const combinedTrainData = [...originalTrainData, ...augmentedTrainData];
+    const combinedValData = [...originalValData, ...augmentedValData];
+    
+    // 새로운 데이터셋으로 값 추출
+    const trainXValues = combinedTrainData.map(data => data.x);
+    const trainYValues = combinedTrainData.map(data => data.y);
+    const valXValues = combinedValData.map(data => data.x);
+    const valYValues = combinedValData.map(data => data.y);
 
     // 추출된 값들을 텐서로 변환
     const trainX = tf.tensor3d(trainXValues, [trainXValues.length, 17, 3]);
@@ -190,8 +191,8 @@ async function trainModel(model, trainData, valData) {
 
     // 모델 훈련
     await model.fit(trainX, trainY, {
-        epochs: 700, // 에포크 수
-        batchSize: 32, // 배치 크기
+        epochs: 60, // 에포크 수
+        batchSize: 12, // 배치 크기
         validationData: [valX, valY],
         callbacks: {
           onEpochEnd: (epoch, logs) => {
@@ -216,6 +217,7 @@ async function testModel(model, testData) {
     // 테스트 데이터를 텐서로 변환
     const testX = tf.tensor3d(testXValues, [testXValues.length, 17, 3]);
     const testY = tf.tensor1d(testYValues, 'float32');
+    console.log('Test Y values:', await testY.array());
 
     // 모델 평가
     const evalResult = model.evaluate(testX, testY);
